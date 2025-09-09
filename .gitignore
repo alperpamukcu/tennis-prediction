@@ -1,16 +1,16 @@
-# --- keep venv & artifacts out of git (root-anchored) ---
+# root-anchored ignores
 /.venv/
-/__pycache__/
-/*.pyc
-/.env
 /data/
 /data_raw/
 /data_proc/
-/*.parquet
+/__pycache__/
+/.env
+*.pyc
 *.pkl
+*.parquet
 .DS_Store
 Thumbs.db
 
-# --- allow code helpers under src/data (not the /data folder) ---
+# allow code helpers under src/data
 !src/data/
 !src/data/**
