@@ -9,3 +9,6 @@ data_proc/
 *.pkl
 .DS_Store
 Thumbs.db
+# track code helpers under src/data
+!src/data/
+!src/data/**
