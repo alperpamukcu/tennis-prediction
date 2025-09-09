@@ -1,0 +1,90 @@
+<!doctype html>
+<p class="mt-3 text-sm text-slate-500">Implied probabilities are derived as 1/odds and normalized. For live wiring to your real odds provider, edit <code>src/services/upcoming.py</code>.</p>
+</main>
+
+
+<script>
+const fmtTime = (iso) => {
+try { return new Date(iso).toLocaleString(); } catch { return iso; }
+};
+
+
+const pct = (x) => (x*100).toFixed(1) + '%';
+
+
+const row = (m) => {
+const underdog = m.odds_a > m.odds_b ? 'A' : 'B';
+const valueHint = (m.pick === underdog) ? '<span class="ml-2 text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full text-xs">value</span>' : '';
+return `
+<tr class="hover:bg-slate-50">
+<td class="px-4 py-3">${fmtTime(m.start_time)}</td>
+<td class="px-4 py-3">${m.tournament}</td>
+<td class="px-4 py-3">
+<div class="font-medium">${m.player_a} <span class="text-slate-400">vs</span> ${m.player_b}</div>
+<div class="h-2 bg-slate-200 rounded-full mt-1">
+<div class="h-2 rounded-full ${m.pick==='A'?'bg-blue-500':'bg-slate-400'}" style="width:${(m.prob_a*100).toFixed(0)}%"></div>
+</div>
+</td>
+<td class="px-4 py-3 text-right tabular-nums">${m.odds_a.toFixed(2)} / ${m.odds_b.toFixed(2)}</td>
+<td class="px-4 py-3 text-right tabular-nums">${pct(m.prob_a)} / ${pct(m.prob_b)}</td>
+<td class="px-4 py-3 text-right font-semibold">${m.pick}${valueHint}</td>
+</tr>`;
+};
+
+
+const state = { raw: [] };
+
+
+const applyFilters = () => {
+const q = document.querySelector('#q').value.trim().toLowerCase();
+const how = document.querySelector('#sort').value;
+let arr = [...state.raw];
+if (q) {
+arr = arr.filter(m => (
+m.tournament.toLowerCase().includes(q) ||
+m.player_a.toLowerCase().includes(q) ||
+m.player_b.toLowerCase().includes(q)
+));
+}
+if (how === 'prob') arr.sort((a,b)=> (b.prob_a> b.prob_b?b.prob_a:b.prob_b) - (a.prob_a> a.prob_b?a.prob_a:a.prob_b));
+else if (how === 'value') {
+// crude: short underdog with higher prob margin first
+const score = m => {
+const fav = m.odds_a < m.odds_b ? 'A':'B';
+const pickProb = m.pick==='A'?m.prob_a:m.prob_b;
+const favProb = fav==='A'?m.prob_a:m.prob_b;
+return (m.pick!==fav) ? (pickProb - favProb) : -1; // prefer when pick is underdog
+};
+arr.sort((a,b)=> score(b)-score(a));
+}
+else { // time
+arr.sort((a,b)=> new Date(a.start_time)-new Date(b.start_time));
+}
+document.querySelector('#tbody').innerHTML = arr.map(row).join('');
+document.querySelector('#status').textContent = `${arr.length} matches`;
+};
+
+
+const load = async () => {
+try {
+document.querySelector('#status').textContent = 'Loading…';
+const res = await fetch('/api/upcoming');
+const data = await res.json();
+state.raw = data;
+applyFilters();
+} catch (e) {
+document.querySelector('#status').textContent = 'Failed to load';
+console.error(e);
+}
+};
+
+
+document.querySelector('#refresh').addEventListener('click', load);
+document.querySelector('#q').addEventListener('input', applyFilters);
+document.querySelector('#sort').addEventListener('change', applyFilters);
+
+
+load();
+</script>
+</body>
+</html>
